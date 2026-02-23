@@ -1,5 +1,5 @@
 /* ========================================
-   GEMINI AI CHAT - FIXED VERSION
+   GEMINI AI CHAT - FINAL VERSION
    ======================================== */
 
 const WORKER_URL = "https://weathered-band-197b.vanphapnt9-4.workers.dev";
@@ -64,6 +64,7 @@ async function guiTinNhanDenAI(nhanVatId, userMessage, callback) {
             parts: [{ text: text }]
         });
 
+        // Giữ 10 cặp hội thoại + 1 cặp system message
         if (session.contents.length > 22) {
             session.contents = [
                 session.contents[0],
@@ -80,14 +81,29 @@ async function guiTinNhanDenAI(nhanVatId, userMessage, callback) {
         let errorMsg = "*[Không thể kết nối]*";
         const errStr = error.message.toLowerCase();
 
-        if (errStr.includes("api key") || errStr.includes("invalid")) {
-            errorMsg = "*[Lỗi: API Key không hợp lệ]*";
-        } else if (errStr.includes("quota") || errStr.includes("429") || errStr.includes("exhausted")) {
-            errorMsg = "*[Hết quota, thử lại sau]*";
-        } else if (errStr.includes("failed to fetch")) {
-            errorMsg = "*[Không kết nối được Worker]*";
-        } else {
-            errorMsg = `*[Lỗi: ${error.message.substring(0, 60)}]*`;
+        // XỬ LÝ LỖI KHU VỰC
+        if (errStr.includes("location") || errStr.includes("not supported") || errStr.includes("region")) {
+            errorMsg = "*[⚠️ Khu vực của bạn không được hỗ trợ bởi Gemini API. Vui lòng sử dụng VPN để truy cập!]*";
+        } 
+        // XỬ LÝ LỖI API KEY
+        else if (errStr.includes("api key") || errStr.includes("invalid") || errStr.includes("api_key_invalid")) {
+            errorMsg = "*[Lỗi: API Key không hợp lệ hoặc đã hết hạn]*";
+        } 
+        // XỬ LÝ LỖI HẾT QUOTA
+        else if (errStr.includes("quota") || errStr.includes("429") || errStr.includes("exhausted") || errStr.includes("resource_exhausted")) {
+            errorMsg = "*[Đã hết quota miễn phí. Vui lòng thử lại sau hoặc nâng cấp plan!]*";
+        } 
+        // XỬ LÝ LỖI MẠNG
+        else if (errStr.includes("failed to fetch") || errStr.includes("network") || errStr.includes("timeout")) {
+            errorMsg = "*[Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại!]*";
+        } 
+        // XỬ LÝ LỖI SERVER QUÁ TẢI
+        else if (errStr.includes("503") || errStr.includes("overload") || errStr.includes("unavailable")) {
+            errorMsg = "*[Server đang quá tải. Vui lòng thử lại sau vài giây!]*";
+        }
+        // LỖI KHÁC
+        else {
+            errorMsg = `*[Lỗi: ${error.message.substring(0, 80)}]*`;
         }
 
         if (callback) callback(errorMsg);
@@ -120,9 +136,7 @@ window.handleGameChatMessage = function(userText, callback) {
         const tempDiv = document.getElementById('temp-typing-indicator');
         if (tempDiv) tempDiv.remove();
         
-        
-        
-        // Vẫn gọi callback nếu có
+        // Chỉ gọi callback cho game-engine.js xử lý hiển thị
         if (typeof callback === "function") callback(aiText);
     });
 };
